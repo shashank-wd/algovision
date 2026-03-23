@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoVision — Graph Search Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4ff;
+  --surface: rgba(255,255,255,0.92);
+  --surface2: rgba(255,255,255,0.65);
+  --border: rgba(99,102,241,0.13);
+  --text: #1e1b4b;
+  --text2: #4f46e5;
+  --muted: #64748b;
+  --indigo: #4f46e5;
+  --indigo-l: #818cf8;
+  --indigo-ll: #e0e7ff;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --node-r: 26;
+  --shadow: 0 4px 24px rgba(99,102,241,0.10);
+  --shadow-sm: 0 2px 8px rgba(99,102,241,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* BG dots */
+#bgc{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+.app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* Header */
+header{
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow-sm);position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--indigo),var(--cyan));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  box-shadow:0 0 18px rgba(79,70,229,0.4);
+  animation:glow 3s ease-in-out infinite;
+}
+@keyframes glow{0%,100%{box-shadow:0 0 18px rgba(79,70,229,0.4)}50%{box-shadow:0 0 30px rgba(6,182,212,0.55)}}
+.logo h1{font-size:1.35rem;font-weight:800;letter-spacing:-0.5px}
+.logo h1 span{color:var(--indigo)}
+.logo-sub{font-size:0.7rem;color:var(--muted);font-family:'Space Mono',monospace;margin-left:4px}
+
+/* Algo tabs */
+.algo-tabs{
+  display:flex;gap:6px;padding:12px 28px;
+  background:var(--surface2);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);overflow-x:auto;
+}
+.algo-tab{
+  padding:8px 22px;border:1.5px solid var(--border);
+  background:var(--surface);border-radius:10px;
+  font-family:'Space Mono',monospace;font-size:0.76rem;font-weight:700;
+  cursor:pointer;color:var(--muted);transition:all 0.2s;white-space:nowrap;
+}
+.algo-tab:hover{border-color:var(--indigo-l);color:var(--indigo)}
+.algo-tab.active{background:var(--indigo);color:#fff;border-color:var(--indigo);box-shadow:0 4px 16px rgba(79,70,229,0.3)}
+
+/* Main 3-col layout */
+.main{
+  display:grid;grid-template-columns:300px 1fr 300px;gap:16px;
+  padding:18px 20px;align-items:start;flex:1;
+}
+
+/* Cards */
+.card{
+  background:var(--surface);backdrop-filter:blur(16px);
+  border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.card+.card{margin-top:14px}
+.ch{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:7px;
+}
+.ch h3{font-size:0.75rem;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted)}
+.cb{padding:15px}
+
+/* Inputs */
+.lbl{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px}
+input,select,textarea{
+  width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--text);
+  background:rgba(99,102,241,0.03);outline:none;transition:border-color 0.2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+textarea{resize:vertical;min-height:80px}
+.ig{margin-bottom:11px}
+.ig2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
+
+/* Buttons */
+.btn{
+  padding:9px 15px;border:none;border-radius:8px;font-family:'Syne',sans-serif;
+  font-weight:700;font-size:0.8rem;cursor:pointer;transition:all 0.2s;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+}
+.btn-p{background:linear-gradient(135deg,var(--indigo),var(--cyan));color:#fff;box-shadow:0 4px 14px rgba(79,70,229,0.28)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,70,229,0.38)}
+.btn-s{background:rgba(99,102,241,0.07);color:var(--indigo);border:1.5px solid var(--border)}
+.btn-s:hover{background:rgba(99,102,241,0.13)}
+.btn-d{background:rgba(239,68,68,0.07);color:var(--red);border:1.5px solid rgba(239,68,68,0.18)}
+.btn-d:hover{background:rgba(239,68,68,0.13)}
+.btn:disabled{opacity:0.38;cursor:not-allowed;transform:none!important}
+.btn-row{display:flex;gap:6px;margin-bottom:8px}
+.btn-row .btn{flex:1}
+.btn-full{width:100%;margin-top:6px}
+
+/* Speed */
+.speed-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.speed-row label{font-size:0.7rem;font-weight:700;color:var(--muted);white-space:nowrap;text-transform:uppercase}
+input[type=range]{flex:1;accent-color:var(--indigo)}
+.speed-val{font-size:0.7rem;color:var(--muted);font-family:'Space Mono',monospace;min-width:30px}
+
+/* Graph SVG panel */
+.graph-wrap{
+  padding:18px;display:flex;align-items:center;justify-content:center;
+  min-height:460px;
+}
+#gsvg{
+  width:100%;max-width:680px;height:440px;
+  background:rgba(241,245,249,0.45);border-radius:14px;
+  border:1px solid var(--border);cursor:default;
+  filter:drop-shadow(0 2px 8px rgba(99,102,241,0.07));
+}
+
+/* Node colors */
+.n-default circle{fill:#f8fafc;stroke:#cbd5e1;stroke-width:2}
+.n-start circle{fill:var(--green);stroke:#059669;stroke-width:2.5}
+.n-goal circle{fill:var(--red);stroke:#dc2626;stroke-width:2.5}
+.n-frontier circle{fill:var(--cyan);stroke:#0891b2;stroke-width:2.5}
+.n-visited circle{fill:var(--indigo);stroke:#4338ca;stroke-width:2.5}
+.n-path circle{fill:var(--amber);stroke:#d97706;stroke-width:3}
+.n-current circle{fill:var(--purple);stroke:#7c3aed;stroke-width:3}
+
+/* Info panel */
+.algo-name{font-size:1.05rem;font-weight:800;color:var(--indigo)}
+.algo-tag{font-size:0.75rem;color:var(--muted);margin-top:2px;font-family:'Space Mono',monospace}
+.algo-desc{font-size:0.8rem;line-height:1.65;color:var(--text);margin-top:10px}
+
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.badge{padding:3px 10px;border-radius:20px;font-size:0.67rem;font-weight:700;font-family:'Space Mono',monospace}
+.b-blue{background:rgba(99,102,241,0.1);color:var(--indigo)}
+.b-green{background:rgba(16,185,129,0.1);color:var(--green)}
+.b-red{background:rgba(239,68,68,0.1);color:var(--red)}
+.b-cyan{background:rgba(6,182,212,0.1);color:var(--cyan)}
+.b-amber{background:rgba(245,158,11,0.1);color:#b45309}
+
+.cx-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cx-item{background:rgba(99,102,241,0.04);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.cx-l{font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.cx-v{font-size:0.82rem;font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700;margin-top:2px}
+
+/* Steps - how it works */
+.steps-list{list-style:none;display:flex;flex-direction:column;gap:7px;padding:0}
+.steps-list li{
+  font-size:0.77rem;line-height:1.5;color:var(--text);
+  padding:7px 10px 7px 32px;background:rgba(99,102,241,0.03);
+  border:1px solid var(--border);border-radius:8px;position:relative;
+}
+.steps-list li::before{
+  content:attr(data-n);position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;background:var(--indigo);color:#fff;border-radius:50%;
+  font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;
+}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:rgba(99,102,241,0.04);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.stat-v{font-size:1.25rem;font-weight:800;color:var(--indigo);font-family:'Space Mono',monospace}
+.stat-l{font-size:0.64rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-top:2px}
+
+/* Step log */
+#log{height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:2px}
+#log::-webkit-scrollbar{width:4px}
+#log::-webkit-scrollbar-thumb{background:var(--indigo-l);border-radius:2px}
+.le{
+  padding:5px 9px;border-radius:6px;font-size:0.69rem;
+  font-family:'Space Mono',monospace;color:var(--muted);
+  border-left:2px solid transparent;line-height:1.45;
+  animation:lf 0.25s ease;
+}
+@keyframes lf{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+.le.lv{border-color:var(--indigo);color:var(--indigo);background:rgba(99,102,241,0.05)}
+.le.lf{border-color:var(--cyan);color:#0891b2;background:rgba(6,182,212,0.05)}
+.le.lp{border-color:var(--amber);color:#92400e;background:rgba(245,158,11,0.06)}
+.le.ls{border-color:var(--green);color:var(--green);background:rgba(16,185,129,0.05)}
+.le.le2{border-color:var(--red);color:var(--red);background:rgba(239,68,68,0.05)}
+
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:7px}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--muted);font-family:'Space Mono',monospace}
+.leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid rgba(0,0,0,0.1)}
+
+/* Heuristic table */
+.h-table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:0.72rem}
+.h-table th{background:rgba(99,102,241,0.08);padding:5px 8px;text-align:left;color:var(--indigo);font-size:0.68rem;letter-spacing:0.4px}
+.h-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+.h-table tr:last-child td{border-bottom:none}
+.h-table tr:hover td{background:rgba(99,102,241,0.03)}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);
+  padding:11px 22px;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;
+  font-size:0.88rem;z-index:9999;transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  display:flex;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,0.12);
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ts{background:var(--green);color:#fff}
+#toast.te{background:var(--red);color:#fff}
+#toast.ti{background:var(--indigo);color:#fff}
+
+/* Path result */
+.path-result{
+  margin-top:10px;padding:10px 12px;border-radius:10px;
+  background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.25);
+  font-family:'Space Mono',monospace;font-size:0.78rem;color:#92400e;
+  display:none;line-height:1.7;
+}
+.path-result.show{display:block;animation:lf 0.4s ease}
+.path-result strong{color:#b45309}
+
+/* Section divider */
+.divider{height:1px;background:var(--border);margin:10px 0}
+
+/* Comparison table */
+.cmp-table{width:100%;border-collapse:collapse;font-size:0.7rem}
+.cmp-table th{background:rgba(99,102,241,0.08);padding:6px 8px;text-align:left;color:var(--indigo);font-size:0.66rem;letter-spacing:0.3px;font-family:'Space Mono',monospace}
+.cmp-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--text)}
+.cmp-table tr.active-row td{background:rgba(99,102,241,0.06);font-weight:700;color:var(--indigo)}
+.yes{color:var(--green)!important}.no{color:var(--red)!important}
+
+@media(max-width:1100px){.main{grid-template-columns:260px 1fr 260px}}
+@media(max-width:860px){.main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<canvas id="bgc"></canvas>
+
+<div class="app">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <h1>Algo<span>Vision</span></h1>
+    <span class="logo-sub">/ Graph Search</span>
+  </div>
+  <div style="font-size:0.72rem;color:var(--muted);font-family:'Space Mono',monospace">
+    Based on GeeksForGeeks · AI Search Algorithms
+  </div>
+</header>
+
+<div class="algo-tabs">
+  <button class="algo-tab active" onclick="switchAlgo('bfs')">BFS</button>
+  <button class="algo-tab" onclick="switchAlgo('dfs')">DFS</button>
+  <button class="algo-tab" onclick="switchAlgo('ucs')">UCS</button>
+  <button class="algo-tab" onclick="switchAlgo('greedy')">Greedy</button>
+  <button class="algo-tab" onclick="switchAlgo('astar')">A*</button>
+</div>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <div>
+
+    <!-- Graph Setup -->
+    <div class="card">
+      <div class="ch"><h3>⚙ Graph Setup</h3></div>
+      <div class="cb">
+        <div class="ig">
+          <label class="lbl">Nodes (comma-separated)</label>
+          <input id="inNodes" value="S,A,B,C,D,E,G">
+        </div>
+        <div class="ig">
+          <label class="lbl">Edges (format: X-Y:cost, one per line)</label>
+          <textarea id="inEdges">S-A:3
+S-D:2
+A-B:2
+B-C:2
+B-E:1
+C-G:4
+D-B:1
+D-E:4
+E-G:3</textarea>
+        </div>
+        <div class="ig2">
+          <div>
+            <label class="lbl">Start</label>
+            <select id="selStart"></select>
+          </div>
+          <div>
+            <label class="lbl">Goal</label>
+            <select id="selGoal"></select>
+          </div>
+        </div>
+        <button class="btn btn-s btn-full" onclick="buildGraph()">↺ Rebuild Graph</button>
+      </div>
+    </div>
+
+    <!-- Heuristics -->
+    <div class="card">
+      <div class="ch"><h3>🎯 Heuristic Values h(n)</h3></div>
+      <div class="cb">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px">Used by Greedy & A* algorithms</div>
+        <div id="hTableWrap"></div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:6px;font-family:'Space Mono',monospace">
+          h(n) = estimated cost to goal
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="ch"><h3>▶ Controls</h3></div>
+      <div class="cb">
+        <div class="btn-row">
+          <button class="btn btn-p" id="btnRun" onclick="runAlgo()">▶ Run</button>
+          <button class="btn btn-s" id="btnPause" onclick="pauseToggle()" disabled>⏸ Pause</button>
+          <button class="btn btn-s" id="btnStep" onclick="doStep()" disabled>⏭ Step</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-s" onclick="resetViz()">↺ Reset</button>
+          <button class="btn btn-d" onclick="resetAll()">✕ Clear</button>
+        </div>
+        <div class="speed-row">
+          <label>Speed</label>
+          <input type="range" id="spd" min="1" max="3" value="2" oninput="updateSpeed()">
+          <span class="speed-val" id="spdLbl">Med</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card">
+      <div class="ch"><h3>◈ Legend</h3></div>
+      <div class="cb">
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Start</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Goal</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--cyan)"></div>Frontier</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--indigo)"></div>Visited</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--purple)"></div>Current</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Path</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER -->
+  <div>
+
+    <!-- SVG -->
+    <div class="card">
+      <div class="ch"><h3 id="graphTitle">◎ Graph Visualizer — BFS</h3></div>
+      <div class="graph-wrap">
+        <svg id="gsvg" viewBox="0 0 680 420"></svg>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card" style="margin-top:14px">
+      <div class="ch"><h3>📊 Run Statistics</h3></div>
+      <div class="cb">
+        <div class="stats-grid">
+          <div class="stat"><div class="stat-v" id="stV">—</div><div class="stat-l">Nodes Visited</div></div>
+          <div class="stat"><div class="stat-v" id="stP">—</div><div class="stat-l">Path Length</div></div>
+          <div class="stat"><div class="stat-v" id="stC">—</div><div class="stat-l">Path Cost</div></div>
+          <div class="stat"><div class="stat-v" id="stT">—</div><div class="stat-l">Time (ms)</div></div>
+        </div>
+        <div class="path-result" id="pathResult">
+          <strong>Path:</strong> <span id="pathStr">—</span><br>
+          <strong>Cost:</strong> <span id="costStr">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="card" style="margin-top:14px">
+      <div class="ch"><h3>⚖ Algorithm Comparison</h3></div>
+      <div class="cb" style="overflow-x:auto">
+        <table class="cmp-table" id="cmpTable">
+          <thead><tr>
+            <th>Algorithm</th><th>Time</th><th>Space</th><th>Complete</th><th>Optimal</th><th>Heuristic</th>
+          </tr></thead>
+          <tbody>
+            <tr data-algo="bfs"><td>BFS</td><td>O(b^d)</td><td>O(b^d)</td><td class="yes">Yes</td><td class="yes">Yes*</td><td class="no">No</td></tr>
+            <tr data-algo="dfs"><td>DFS</td><td>O(b^d)</td><td>O(d)</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr data-algo="ucs"><td>UCS</td><td>O(b^(C*/ε))</td><td>O(b^(C*/ε))</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+            <tr data-algo="greedy"><td>Greedy</td><td>O(b^m)</td><td>O(b^m)</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes h(n)</td></tr>
+            <tr data-algo="astar"><td>A*</td><td>O(b^d)</td><td>O(b^d)</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes f=g+h</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+
+    <!-- Algo info -->
+    <div class="card">
+      <div class="ch"><h3>🧠 Algorithm Info</h3></div>
+      <div class="cb">
+        <div class="algo-name" id="aName">BFS</div>
+        <div class="algo-tag" id="aTag">Breadth-First Search</div>
+        <div class="algo-desc" id="aDesc"></div>
+        <div class="badges" id="aBadges"></div>
+        <div class="cx-grid">
+          <div class="cx-item"><div class="cx-l">Time</div><div class="cx-v" id="aTime"></div></div>
+          <div class="cx-item"><div class="cx-l">Space</div><div class="cx-v" id="aSpace"></div></div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Expected Path (GFG)</div>
+        <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--indigo);background:rgba(99,102,241,0.06);padding:8px 10px;border-radius:8px;border:1px solid var(--border)" id="aExpected"></div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="card">
+      <div class="ch"><h3>⚡ How It Works</h3></div>
+      <div class="cb">
+        <ol class="steps-list" id="aSteps"></ol>
+      </div>
+    </div>
+
+    <!-- Step log -->
+    <div class="card">
+      <div class="ch"><h3>📋 Step Log</h3></div>
+      <div class="cb" style="padding:10px">
+        <div id="log"><div class="le" style="color:var(--muted)">Run an algorithm to see steps here...</div></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── BG ANIMATION ─────────────────────────────────────────────
+const bgc = document.getElementById('bgc');
+const bx = bgc.getContext('2d');
+let dots = [];
+function initBg(){
+  bgc.width=innerWidth; bgc.height=innerHeight; dots=[];
+  for(let x=0;x<innerWidth+40;x+=38) for(let y=0;y<innerHeight+40;y+=38)
+    dots.push({x,y,ox:x,oy:y,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25});
+}
+function drawBg(){
+  bx.clearRect(0,0,bgc.width,bgc.height);
+  dots.forEach(d=>{
+    d.x+=d.vx; d.y+=d.vy;
+    if(Math.abs(d.x-d.ox)>7)d.vx*=-1;
+    if(Math.abs(d.y-d.oy)>7)d.vy*=-1;
+    bx.beginPath(); bx.arc(d.x,d.y,1.4,0,Math.PI*2);
+    bx.fillStyle='rgba(99,102,241,0.13)'; bx.fill();
+  });
+  requestAnimationFrame(drawBg);
+}
+initBg(); drawBg();
+addEventListener('resize',initBg);
+
+// ─── ALGORITHM METADATA ───────────────────────────────────────
+const META = {
+  bfs:{
+    name:'BFS', tag:'Breadth-First Search — Uninformed',
+    desc:'BFS explores the graph level by level using a FIFO queue. It visits all neighbors at the current depth before going deeper, guaranteeing the shortest path in unweighted graphs. It\'s complete but memory-intensive.',
+    ds:'Queue (FIFO)', optimal:true, complete:true, heuristic:false,
+    time:'O(b^d)', space:'O(b^d)',
+    expected:'S → D → G  (cost: 2+1+? shortest edges)',
+    steps:['Add start S to queue; mark visited','Dequeue front node; check if goal','Enqueue all unvisited neighbors, mark visited','Repeat until queue empty or goal reached']
+  },
+  dfs:{
+    name:'DFS', tag:'Depth-First Search — Uninformed',
+    desc:'DFS dives as deep as possible along one branch before backtracking, using a LIFO stack. Memory-efficient but not guaranteed to find the shortest path. May explore long dead-end branches first.',
+    ds:'Stack (LIFO)', optimal:false, complete:false, heuristic:false,
+    time:'O(b^d)', space:'O(d)',
+    expected:'S → A → B → C → G',
+    steps:['Push start S onto stack','Pop top node; if goal done; mark visited','Push unvisited neighbors onto stack','Backtrack when stuck; repeat until goal or empty']
+  },
+  ucs:{
+    name:'UCS', tag:'Uniform Cost Search — Uninformed',
+    desc:'UCS always expands the node with the lowest cumulative path cost g(n) using a min-priority queue. Unlike BFS, it accounts for varying edge weights and guarantees the optimal (cheapest) path.',
+    ds:'Min-Heap by g(n)', optimal:true, complete:true, heuristic:false,
+    time:'O(b^(C*/ε))', space:'O(b^(C*/ε))',
+    expected:'S → A → B → G  (cost: 3+2+? or S→D→B→G)',
+    steps:['Insert start with cost g=0 into priority queue','Extract node with minimum cumulative cost','For each neighbor: compute new g, enqueue if cheaper','Repeat until goal extracted from queue']
+  },
+  greedy:{
+    name:'Greedy', tag:'Greedy Best-First Search — Informed',
+    desc:'Greedy search always expands the node that looks closest to the goal based purely on heuristic h(n), ignoring actual path cost g(n). Fast but suboptimal — may find longer paths if heuristic is misleading.',
+    ds:'Min-Heap by h(n)', optimal:false, complete:false, heuristic:true,
+    time:'O(b^m)', space:'O(b^m)',
+    expected:'S → D → E → G  (guided by h values)',
+    steps:['Insert start into priority queue by h(n)','Extract node with lowest heuristic h(n)','If goal, done; else enqueue unvisited neighbors by h','Greedy — follows heuristic, not actual cost']
+  },
+  astar:{
+    name:'A*', tag:'A* Search — Informed (Optimal)',
+    desc:'A* combines UCS and Greedy: f(n) = g(n) + h(n). It balances actual cost with estimated remaining cost. With an admissible heuristic, A* is both complete and optimal — the gold standard for pathfinding.',
+    ds:'Min-Heap by f=g+h', optimal:true, complete:true, heuristic:true,
+    time:'O(b^d)', space:'O(b^d)',
+    expected:'S → D → B → E → G  (cost: 7)',
+    steps:['Insert start with f = 0 + h(S) into open set','Extract node with minimum f(n) = g(n) + h(n)','For each neighbor: compute g+h; update if f is better','Repeat until goal is extracted; reconstruct path']
+  }
+};
+
+// ─── GRAPH STATE ──────────────────────────────────────────────
+let nodes=[], edges=[], adj={}, hvals={}, positions={};
+let startNode='S', goalNode='G';
+let currentAlgo='bfs';
+let nodeState={}; // 'default'|'start'|'goal'|'frontier'|'visited'|'path'|'current'
+let pathEdges=[]; // edges in final path to highlight
+
+// Default heuristics (GFG values)
+const DEFAULT_H = {S:7, A:9, B:4, C:2, D:5, E:3, G:0};
+
+// Default positions for the GFG graph (hand-tuned)
+const DEFAULT_POS = {
+  S:{x:100, y:210},
+  A:{x:240, y:100},
+  B:{x:380, y:170},
+  C:{x:510, y:90},
+  D:{x:240, y:320},
+  E:{x:510, y:280},
+  G:{x:620, y:190}
+};
+
+// ─── BUILD GRAPH ──────────────────────────────────────────────
+function buildGraph(){
+  const nStr = document.getElementById('inNodes').value;
+  const eStr = document.getElementById('inEdges').value;
+  nodes = nStr.split(',').map(n=>n.trim()).filter(Boolean);
+  edges = []; adj = {};
+  nodes.forEach(n=>{ adj[n]=[]; });
+
+  eStr.split('\n').forEach(line=>{
+    line=line.trim(); if(!line)return;
+    const m=line.match(/^(\w+)-(\w+)(?::(\d+(?:\.\d+)?))?$/);
+    if(m){
+      const [,a,b,w]=[...m]; const wt=w?parseFloat(w):1;
+      if(adj[a]&&adj[b]){
+        edges.push({a,b,w:wt});
+        adj[a].push({to:b,w:wt}); adj[b].push({to:a,w:wt});
+      }
+    }
+  });
+
+  // Positions
+  positions={};
+  nodes.forEach(n=>{
+    positions[n] = DEFAULT_POS[n] ? {...DEFAULT_POS[n]} : {x:80+Math.random()*520, y:60+Math.random()*300};
+  });
+
+  // Heuristics: keep GFG values if node exists, else 0
+  hvals={};
+  nodes.forEach(n=>{ hvals[n] = DEFAULT_H[n]!==undefined ? DEFAULT_H[n] : 0; });
+
+  // Selects
+  const ss=document.getElementById('selStart'), sg=document.getElementById('selGoal');
+  ss.innerHTML=sg.innerHTML=nodes.map(n=>`<option value="${n}">${n}</option>`).join('');
+  ss.value='S'; sg.value='G';
+  startNode='S'; goalNode='G';
+
+  ss.onchange=()=>{ startNode=ss.value; renderGraph(); };
+  sg.onchange=()=>{ goalNode=sg.value; renderGraph(); };
+
+  buildHTable();
+  resetViz();
+  renderGraph();
+  updateInfo();
+}
+
+function buildHTable(){
+  const tb = document.getElementById('hTableWrap');
+  tb.innerHTML=`<table class="h-table">
+    <thead><tr><th>Node</th><th>h(n) to Goal</th></tr></thead>
+    <tbody>${nodes.map(n=>`<tr><td><b>${n}</b></td><td>${hvals[n]}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ─── SVG RENDERING ────────────────────────────────────────────
+function svgNS(tag){ return document.createElementNS('http://www.w3.org/2000/svg',tag); }
+
+function renderGraph(animNodes=null){
+  const svg=document.getElementById('gsvg');
+  svg.innerHTML='';
+
+  // Defs (arrow + glows)
+  const defs=svgNS('defs');
+  // Arrow
+  const mkr=svgNS('marker');
+  mkr.setAttribute('id','arr'); mkr.setAttribute('markerWidth','9'); mkr.setAttribute('markerHeight','7');
+  mkr.setAttribute('refX','20'); mkr.setAttribute('refY','3.5'); mkr.setAttribute('orient','auto');
+  const ap=svgNS('polygon');
+  ap.setAttribute('points','0 0, 9 3.5, 0 7'); ap.setAttribute('fill','#94a3b8');
+  mkr.appendChild(ap); defs.appendChild(mkr);
+
+  // Glow filter
+  const filt=svgNS('filter'); filt.setAttribute('id','glow'); filt.setAttribute('x','-50%'); filt.setAttribute('y','-50%'); filt.setAttribute('width','200%'); filt.setAttribute('height','200%');
+  const blur=svgNS('feGaussianBlur'); blur.setAttribute('stdDeviation','4'); blur.setAttribute('result','blur');
+  const flood=svgNS('feFlood'); flood.setAttribute('flood-opacity','0');
+  const comp=svgNS('feComposite'); comp.setAttribute('in','blur');
+  const merge=svgNS('feMerge');
+  const m1=svgNS('feMergeNode'); m1.setAttribute('in','blur');
+  const m2=svgNS('feMergeNode'); m2.setAttribute('in','SourceGraphic');
+  merge.appendChild(m1); merge.appendChild(m2);
+  filt.appendChild(blur); filt.appendChild(merge); defs.appendChild(filt);
+  svg.appendChild(defs);
+
+  // Draw edges
+  edges.forEach(({a,b,w})=>{
+    const pa=positions[a], pb=positions[b]; if(!pa||!pb)return;
+    const isPath=pathEdges.some(e=>(e.a===a&&e.b===b)||(e.a===b&&e.b===a));
+    const isActive=animNodes&&(animNodes.includes(a)||animNodes.includes(b));
+
+    // Edge line
+    const line=svgNS('line');
+    line.setAttribute('x1',pa.x); line.setAttribute('y1',pa.y);
+    line.setAttribute('x2',pb.x); line.setAttribute('y2',pb.y);
+    line.setAttribute('stroke', isPath?'#f59e0b' : isActive?'#818cf8' : '#cbd5e1');
+    line.setAttribute('stroke-width', isPath?3.5 : 1.8);
+    line.setAttribute('stroke-dasharray', isPath?'none':'none');
+    if(isPath) line.setAttribute('filter','url(#glow)');
+    svg.appendChild(line);
+
+    // Weight label
+    const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    // perpendicular offset
+    const dx=pb.x-pa.x, dy=pb.y-pa.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ox=-dy/len*12, oy=dx/len*12;
+
+    const wbg=svgNS('rect');
+    wbg.setAttribute('x',mx+ox-10); wbg.setAttribute('y',my+oy-9);
+    wbg.setAttribute('width',20); wbg.setAttribute('height',14);
+    wbg.setAttribute('rx',4); wbg.setAttribute('fill',isPath?'rgba(245,158,11,0.15)':'rgba(241,245,249,0.9)');
+    svg.appendChild(wbg);
+
+    const wt=svgNS('text');
+    wt.setAttribute('x',mx+ox); wt.setAttribute('y',my+oy+1);
+    wt.setAttribute('text-anchor','middle'); wt.setAttribute('dominant-baseline','middle');
+    wt.setAttribute('font-size','11'); wt.setAttribute('font-family','Space Mono,monospace');
+    wt.setAttribute('font-weight','700');
+    wt.setAttribute('fill',isPath?'#b45309':'#64748b');
+    wt.textContent=w;
+    svg.appendChild(wt);
+  });
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const pos=positions[n]; if(!pos)return;
+    let state=nodeState[n]||'default';
+    if(n===startNode&&state==='default')state='start';
+    if(n===goalNode&&state==='default')state='goal';
+
+    const colMap={
+      default:{fill:'#f8fafc',stroke:'#94a3b8',text:'#1e293b'},
+      start:{fill:'#10b981',stroke:'#059669',text:'#fff'},
+      goal:{fill:'#ef4444',stroke:'#dc2626',text:'#fff'},
+      frontier:{fill:'#06b6d4',stroke:'#0891b2',text:'#fff'},
+      visited:{fill:'#4f46e5',stroke:'#4338ca',text:'#fff'},
+      path:{fill:'#f59e0b',stroke:'#d97706',text:'#fff'},
+      current:{fill:'#8b5cf6',stroke:'#7c3aed',text:'#fff'}
+    };
+    const col=colMap[state]||colMap.default;
+    const R=26;
+    const glow=['frontier','visited','path','current'].includes(state);
+
+    const g=svgNS('g'); g.setAttribute('class','node-g');
+    g.setAttribute('data-n',n); g.style.cursor='grab';
+
+    // Shadow circle for glow effect
+    if(glow){
+      const sc=svgNS('circle');
+      sc.setAttribute('cx',pos.x); sc.setAttribute('cy',pos.y); sc.setAttribute('r',R+5);
+      sc.setAttribute('fill',col.fill); sc.setAttribute('opacity','0.2');
+      g.appendChild(sc);
+    }
+
+    const circ=svgNS('circle');
+    circ.setAttribute('cx',pos.x); circ.setAttribute('cy',pos.y); circ.setAttribute('r',R);
+    circ.setAttribute('fill',col.fill); circ.setAttribute('stroke',col.stroke);
+    circ.setAttribute('stroke-width', state==='path'?3:2.5);
+    if(glow) circ.setAttribute('filter','url(#glow)');
+
+    const lbl=svgNS('text');
+    lbl.setAttribute('x',pos.x); lbl.setAttribute('y',pos.y-2);
+    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','middle');
+    lbl.setAttribute('font-size','14'); lbl.setAttribute('font-family','Space Mono,monospace');
+    lbl.setAttribute('font-weight','700'); lbl.setAttribute('fill',col.text);
+    lbl.textContent=n;
+
+    // Heuristic value below node
+    const hv=hvals[n];
+    if(hv!==undefined){
+      const ht=svgNS('text');
+      ht.setAttribute('x',pos.x); ht.setAttribute('y',pos.y+13);
+      ht.setAttribute('text-anchor','middle'); ht.setAttribute('font-size','9');
+      ht.setAttribute('font-family','Space Mono,monospace'); ht.setAttribute('font-weight','700');
+      ht.setAttribute('fill',col.text==='#fff'?'rgba(255,255,255,0.75)':'#94a3b8');
+      ht.textContent=`h=${hv}`;
+      g.appendChild(circ); g.appendChild(lbl); g.appendChild(ht);
+    } else {
+      g.appendChild(circ); g.appendChild(lbl);
+    }
+    svg.appendChild(g);
+
+    // Drag
+    let dragging=false;
+    g.addEventListener('mousedown',e=>{
+      dragging=true; e.stopPropagation();
+      const onMove=ev=>{
+        if(!dragging)return;
+        const rect=svg.getBoundingClientRect();
+        const scaleX=680/rect.width, scaleY=420/rect.height;
+        positions[n].x=Math.max(30,Math.min(650,(ev.clientX-rect.left)*scaleX));
+        positions[n].y=Math.max(30,Math.min(390,(ev.clientY-rect.top)*scaleY));
+        renderGraph();
+      };
+      const onUp=()=>{ dragging=false; document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); };
+      document.addEventListener('mousemove',onMove);
+      document.addEventListener('mouseup',onUp);
+    });
+  });
+}
+
+// ─── PRIORITY QUEUE ───────────────────────────────────────────
+class PQ {
+  constructor(){ this.h=[]; }
+  push(item,pri){ this.h.push({item,pri}); this.h.sort((a,b)=>a.pri-b.pri); }
+  pop(){ return this.h.shift()?.item; }
+  get size(){ return this.h.length; }
+}
+
+// ─── ALGORITHMS (return {steps, logs, parent, cost}) ─────────
+function algoBFS(s,g){
+  const vis=new Set(), par={}, steps=[], logs=[], queue=[s];
+  vis.add(s);
+  logs.push({t:'start',msg:`Start BFS from ${s} → Goal: ${g}`, node:s});
+  while(queue.length){
+    const n=queue.shift();
+    steps.push({t:'visit',node:n});
+    logs.push({t:'visit',msg:`Visit ${n} — dequeue from FIFO queue`,node:n});
+    if(n===g){ logs.push({t:'found',msg:`🎯 Goal ${g} found!`}); break; }
+    for(const {to,w} of (adj[n]||[])){
+      if(!vis.has(to)){
+        vis.add(to); par[to]=n;
+        steps.push({t:'frontier',node:to,from:n});
+        logs.push({t:'frontier',msg:`  Enqueue ${to} (neighbor of ${n}, cost:${w})`,node:to});
+        queue.push(to);
+      }
+    }
+  }
+  return {steps,logs,par,vis};
+}
+
+function algoDFS(s,g){
+  const vis=new Set(), par={}, steps=[], logs=[], stack=[s];
+  logs.push({t:'start',msg:`Start DFS from ${s} → Goal: ${g}`});
+  while(stack.length){
+    const n=stack.pop();
+    if(vis.has(n)) continue;
+    vis.add(n);
+    steps.push({t:'visit',node:n});
+    logs.push({t:'visit',msg:`Visit ${n} — pop from LIFO stack`,node:n});
+    if(n===g){ logs.push({t:'found',msg:`🎯 Goal ${g} found!`}); break; }
+    const nbrs=[...adj[n]||[]].reverse();
+    for(const {to,w} of nbrs){
+      if(!vis.has(to)){
+        par[to]=n;
+        steps.push({t:'frontier',node:to,from:n});
+        logs.push({t:'frontier',msg:`  Push ${to} onto stack (neighbor of ${n})`,node:to});
+        stack.push(to);
+      }
+    }
+  }
+  return {steps,logs,par,vis};
+}
+
+function algoUCS(s,g){
+  const g_cost={[s]:0}, par={}, steps=[], logs=[], vis=new Set(), pq=new PQ();
+  pq.push(s,0);
+  logs.push({t:'start',msg:`Start UCS from ${s} → Goal: ${g}`});
+  while(pq.size){
+    const n=pq.pop();
+    if(vis.has(n)) continue;
+    vis.add(n);
+    const gc=g_cost[n]||0;
+    steps.push({t:'visit',node:n});
+    logs.push({t:'visit',msg:`Visit ${n} — g(n)=${gc}`,node:n});
+    if(n===g){ logs.push({t:'found',msg:`🎯 Goal ${g} reached! Cost=${gc}`}); break; }
+    for(const {to,w} of (adj[n]||[])){
+      const nc=gc+w;
+      if(g_cost[to]===undefined||nc<g_cost[to]){
+        g_cost[to]=nc; par[to]=n; pq.push(to,nc);
+        steps.push({t:'frontier',node:to,from:n});
+        logs.push({t:'frontier',msg:`  Enqueue ${to} g=${nc}`,node:to});
+      }
+    }
+  }
+  return {steps,logs,par,vis,cost:g_cost};
+}
+
+function algoGreedy(s,g){
+  const vis=new Set(), par={}, steps=[], logs=[], pq=new PQ();
+  pq.push(s,hvals[s]||0);
+  logs.push({t:'start',msg:`Start Greedy from ${s} → Goal: ${g}`});
+  while(pq.size){
+    const n=pq.pop();
+    if(vis.has(n)) continue;
+    vis.add(n);
+    const h=hvals[n]||0;
+    steps.push({t:'visit',node:n});
+    logs.push({t:'visit',msg:`Visit ${n} — h(n)=${h}`,node:n});
+    if(n===g){ logs.push({t:'found',msg:`🎯 Goal ${g} found!`}); break; }
+    const nbrs=[...adj[n]||[]].sort((a,b)=>(hvals[a.to]||0)-(hvals[b.to]||0));
+    for(const {to} of nbrs){
+      if(!vis.has(to)){
+        par[to]=n; pq.push(to,hvals[to]||0);
+        steps.push({t:'frontier',node:to,from:n});
+        logs.push({t:'frontier',msg:`  Enqueue ${to} h=${hvals[to]||0}`,node:to});
+      }
+    }
+  }
+  return {steps,logs,par,vis};
+}
+
+function algoAstar(s,g){
+  const g_cost={[s]:0}, par={}, steps=[], logs=[], vis=new Set(), pq=new PQ();
+  pq.push(s,(hvals[s]||0));
+  logs.push({t:'start',msg:`Start A* from ${s} → Goal: ${g}`});
+  while(pq.size){
+    const n=pq.pop();
+    if(vis.has(n)) continue;
+    vis.add(n);
+    const gc=g_cost[n]||0, h=hvals[n]||0;
+    steps.push({t:'visit',node:n});
+    logs.push({t:'visit',msg:`Visit ${n} — g=${gc} h=${h} f=${gc+h}`,node:n});
+    if(n===g){ logs.push({t:'found',msg:`🎯 Goal! g=${gc} h=${h} f=${gc+h}`}); break; }
+    for(const {to,w} of (adj[n]||[])){
+      const ng=gc+w, nh=hvals[to]||0, nf=ng+nh;
+      if(g_cost[to]===undefined||ng<g_cost[to]){
+        g_cost[to]=ng; par[to]=n; pq.push(to,nf);
+        steps.push({t:'frontier',node:to,from:n});
+        logs.push({t:'frontier',msg:`  Enqueue ${to} g=${ng} h=${nh} f=${nf}`,node:to});
+      }
+    }
+  }
+  return {steps,logs,par,vis,cost:g_cost};
+}
+
+function reconstructPath(par,s,g){
+  const path=[]; let cur=g;
+  while(cur&&cur!==s){ path.unshift(cur); cur=par[cur]; }
+  if(cur===s) path.unshift(s);
+  return path;
+}
+
+// ─── ANIMATION ENGINE ─────────────────────────────────────────
+let animSteps=[], animLogs=[], animIdx=0, animTimer=null;
+let isRunning=false, isPaused=false;
+let resultData=null, t0=0;
+const speedMs={1:800,2:280,3:60};
+
+function getSpeed(){ return speedMs[document.getElementById('spd').value]; }
+function updateSpeed(){
+  const v={1:'Slow',2:'Med',3:'Fast'};
+  document.getElementById('spdLbl').textContent=v[document.getElementById('spd').value];
+}
+
+function runAlgo(){
+  resetViz(false);
+  startNode=document.getElementById('selStart').value;
+  goalNode=document.getElementById('selGoal').value;
+  t0=performance.now();
+
+  const fn={bfs:algoBFS,dfs:algoDFS,ucs:algoUCS,greedy:algoGreedy,astar:algoAstar};
+  resultData=fn[currentAlgo](startNode,goalNode);
+  animSteps=resultData.steps;
+  animLogs=resultData.logs;
+  animIdx=0; isRunning=true; isPaused=false;
+  nodeState={}; pathEdges=[];
+
+  document.getElementById('btnRun').disabled=true;
+  document.getElementById('btnPause').disabled=false;
+  document.getElementById('btnStep').disabled=false;
+  clearLog();
+  addLog(`▶ Running ${META[currentAlgo].name} | ${startNode} → ${goalNode}`,'ls');
+
+  // Render start/goal immediately
+  renderGraph();
+  tick();
+}
+
+function tick(){
+  if(animIdx>=animSteps.length){ finish(); return; }
+  applyStep(animIdx);
+  animIdx++;
+  animTimer=setTimeout(tick,getSpeed());
+}
+
+function applyStep(i){
+  const s=animSteps[i]; if(!s)return;
+  // update nodeState
+  if(s.t==='visit'){
+    // set previous current back to visited
+    nodes.forEach(n=>{ if(nodeState[n]==='current') nodeState[n]='visited'; });
+    nodeState[s.node]='current';
+  } else if(s.t==='frontier'){
+    if(!nodeState[s.node]||nodeState[s.node]==='default') nodeState[s.node]='frontier';
+  }
+  renderGraph();
+  // log
+  const logEntry=animLogs.find((l,li)=>l.node===s.node&&(l.t===s.t||l.t==='visit')&&li>=animIdx-2);
+  const fallback=animLogs[Math.floor(animIdx/2)];
+  const entry=logEntry||fallback;
+  if(entry) addLog(entry.msg, s.t==='visit'?'lv':'lf');
+}
+
+function finish(){
+  isRunning=false; isPaused=false;
+  const elapsed=(performance.now()-t0).toFixed(1);
+
+  // reset 'current' to visited
+  nodes.forEach(n=>{ if(nodeState[n]==='current') nodeState[n]='visited'; });
+
+  // Check if goal was reached
+  const {par,vis,cost}=resultData;
+  const found=par[goalNode]!==undefined||startNode===goalNode;
+
+  document.getElementById('btnRun').disabled=false;
+  document.getElementById('btnPause').disabled=true;
+  document.getElementById('btnStep').disabled=true;
+  document.getElementById('btnPause').textContent='⏸ Pause';
+
+  if(found){
+    const path=reconstructPath(par,startNode,goalNode);
+    // Highlight path
+    pathEdges=[];
+    for(let i=0;i<path.length-1;i++) pathEdges.push({a:path[i],b:path[i+1]});
+    // Animate path
+    path.forEach((n,i)=>setTimeout(()=>{
+      nodeState[n]='path';
+      renderGraph();
+    },i*120));
+
+    const pc=cost?cost[goalNode]:path.length-1;
+    setTimeout(()=>{
+      renderGraph();
+      document.getElementById('stV').textContent=vis.size;
+      document.getElementById('stP').textContent=path.length;
+      document.getElementById('stC').textContent=pc!==undefined?pc:'—';
+      document.getElementById('stT').textContent=elapsed+'ms';
+      const pr=document.getElementById('pathResult');
+      document.getElementById('pathStr').textContent=path.join(' → ');
+      document.getElementById('costStr').textContent=pc!==undefined?pc:'—';
+      pr.classList.add('show');
+      addLog(`✓ Path: ${path.join(' → ')}  Cost=${pc!==undefined?pc:'—'}`,'lp');
+      showToast('🎉 Path Found! '+path.join(' → '),'ts');
+    },path.length*120+100);
+  } else {
+    renderGraph();
+    document.getElementById('stV').textContent=vis.size;
+    document.getElementById('stP').textContent='∞';
+    document.getElementById('stC').textContent='∞';
+    document.getElementById('stT').textContent=elapsed+'ms';
+    addLog('✗ No path found from '+startNode+' to '+goalNode,'le2');
+    showToast('❌ No Path Found','te');
+  }
+
+  // Log all remaining log entries
+  animLogs.forEach((l,i)=>{
+    if(i>animIdx-2) addLog(l.msg, l.t==='found'?'lp':l.t==='visit'?'lv':'lf');
+  });
+}
+
+function pauseToggle(){
+  if(!isRunning)return;
+  if(!isPaused){
+    clearTimeout(animTimer); isPaused=true;
+    document.getElementById('btnPause').textContent='▶ Resume';
+  } else {
+    isPaused=false; document.getElementById('btnPause').textContent='⏸ Pause';
+    tick();
+  }
+}
+
+function doStep(){
+  if(!isRunning)return;
+  clearTimeout(animTimer); isPaused=true;
+  document.getElementById('btnPause').textContent='▶ Resume';
+  if(animIdx<animSteps.length){ applyStep(animIdx); animIdx++; }
+  else finish();
+}
+
+function resetViz(rerender=true){
+  clearTimeout(animTimer);
+  isRunning=false; isPaused=false; animSteps=[]; animLogs=[]; animIdx=0;
+  nodeState={}; pathEdges=[]; resultData=null;
+  document.getElementById('btnRun').disabled=false;
+  document.getElementById('btnPause').disabled=true;
+  document.getElementById('btnPause').textContent='⏸ Pause';
+  document.getElementById('btnStep').disabled=true;
+  document.getElementById('pathResult').classList.remove('show');
+  ['stV','stP','stC','stT'].forEach(id=>document.getElementById(id).textContent='—');
+  clearLog();
+  if(rerender) renderGraph();
+}
+
+function resetAll(){
+  resetViz(false);
+  buildGraph();
+}
+
+// ─── LOG & TOAST ──────────────────────────────────────────────
+function clearLog(){ document.getElementById('log').innerHTML=''; }
+function addLog(msg,cls=''){
+  const d=document.getElementById('log');
+  const e=document.createElement('div');
+  e.className=`le ${cls}`; e.textContent=msg;
+  d.appendChild(e); d.scrollTop=d.scrollHeight;
+}
+let toastT=null;
+function showToast(msg,cls){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`show ${cls}`;
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ─── UI UPDATES ───────────────────────────────────────────────
+function switchAlgo(a){
+  currentAlgo=a;
+  document.querySelectorAll('.algo-tab').forEach((t,i)=>{
+    const al=['bfs','dfs','ucs','greedy','astar'];
+    t.classList.toggle('active',al[i]===a);
+  });
+  document.getElementById('graphTitle').textContent=`◎ Graph Visualizer — ${META[a].name}`;
+  // Highlight comparison row
+  document.querySelectorAll('#cmpTable tbody tr').forEach(r=>{
+    r.classList.toggle('active-row',r.dataset.algo===a);
+  });
+  updateInfo();
+  resetViz();
+}
+
+function updateInfo(){
+  const m=META[currentAlgo];
+  document.getElementById('aName').textContent=m.name;
+  document.getElementById('aTag').textContent=m.tag;
+  document.getElementById('aDesc').textContent=m.desc;
+  document.getElementById('aTime').textContent=m.time;
+  document.getElementById('aSpace').textContent=m.space;
+  document.getElementById('aExpected').textContent=m.expected;
+  // Badges
+  const b=document.getElementById('aBadges');
+  b.innerHTML=`
+    <span class="badge b-blue">${m.ds}</span>
+    <span class="badge ${m.optimal?'b-green':'b-red'}">${m.optimal?'Optimal ✓':'Not Optimal ✗'}</span>
+    <span class="badge ${m.complete?'b-green':'b-red'}">${m.complete?'Complete ✓':'Incomplete ✗'}</span>
+    <span class="badge ${m.heuristic?'b-cyan':'b-amber'}">${m.heuristic?'Uses h(n)':'No Heuristic'}</span>
+  `;
+  // Steps
+  const sl=document.getElementById('aSteps');
+  sl.innerHTML=m.steps.map((s,i)=>`<li data-n="${i+1}">${s}</li>`).join('');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+buildGraph();
+switchAlgo('bfs');
+</script>
+</body>
+</html>
